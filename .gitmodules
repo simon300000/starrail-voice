@@ -1,0 +1,6 @@
+[submodule "hoyo-voice-extractor"]
+	path = hoyo-voice-extractor
+	url = https://github.com/simon300000/hoyo-voice-extractor.git
+[submodule "StarRailData"]
+	path = StarRailData
+	url = https://github.com/Dimbreath/StarRailData.git
