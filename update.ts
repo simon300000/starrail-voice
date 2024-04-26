@@ -65,6 +65,7 @@ for (const { VoiceID, VoicePath, VoiceType } of Object.values(voiceConfig)) {
       voice.inGameFilename = wem
       voice.voiceType = VoiceType || ''
       voice.voiceID = VoiceID.toString()
+      voice.language = language
       const config = voiceHash[VoiceID]
       if (config) {
         voice.transcription = textMap[language][config.TalkSentenceTexthash] || ''

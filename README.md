@@ -52,6 +52,8 @@ Annotations are incomplete. Some voice lines are missing speaker names and trans
 
 Users should be made aware of the risks, biases and limitations of the dataset.
 
+Speaker names can be partially inferred from the ingame filenames.
+
 ## Licensing Information
 
 Copyright © COGNOSPHERE. All Rights Reserved.
