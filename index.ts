@@ -1,7 +1,7 @@
-import { join } from 'path'
-import { rename, mkdir } from 'fs/promises'
+import { join, sep, dirname } from 'path'
+import { rename, mkdir, rm, rmdir } from 'fs/promises'
 
-import { checkResultFolder, unpackPCKs, findFiles, createFolders , unpackBNKs} from './hoyo-voice-extractor/index.js'
+import { checkResultFolder, unpackPCKs, findFiles, findWAV, createFolders, unpackBNKs } from './hoyo-voice-extractor/index.js'
 
 const PCK_SOURCE = join(import.meta.dirname, 'AudioPackage')
 const RESULT = join(import.meta.dirname, 'result')
@@ -31,3 +31,18 @@ await Promise.all(bnks.map(bnk => rename(bnk, bnk.replace(WEM_PATH_PASS1, BNK_PA
 
 console.log('Unpacking BNK Pass 2...')
 await unpackBNKs(BNK_PATH_PASS2, WEM_PATH_PASS2, WAV_PATH_PASS2)
+
+console.log('Renaming pass2 wavs...')
+
+const pass2Wavs = await findWAV(WAV_PATH_PASS2)
+const bnkFolders = new Set<string>()
+const dotBNK = `.bnk${sep}`
+await Promise.all(pass2Wavs.map(async wav => {
+  if (wav.includes(dotBNK)) {
+    const newName = wav.replace(dotBNK, '')
+    await rename(wav, newName)
+    bnkFolders.add(dirname(wav))
+  }
+}))
+
+await Promise.all([...bnkFolders].map(bnk => rmdir(bnk, {})))
