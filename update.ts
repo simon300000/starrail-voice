@@ -11,13 +11,13 @@ const TEXT_MAP_MAP = {
 } as const
 
 const LANGUAGES = Object.keys(TEXT_MAP_MAP) as Array<keyof typeof TEXT_MAP_MAP>
-const TEXTMAPS = Object.values(TEXT_MAP_MAP) as Array<typeof TEXT_MAP_MAP[typeof LANGUAGES[number]]>
 
 const RESULT_PATH = join(import.meta.dirname, 'result')
 const STARRAIL_DATA = join(import.meta.dirname, 'StarRailData')
 
 const VOICE_CONFIG = join(STARRAIL_DATA, 'ExcelOutput', 'VoiceConfig.json')
 const TALK_SENTENCE_CONFIG = join(STARRAIL_DATA, 'ExcelOutput', 'TalkSentenceConfig.json')
+const TALK_SENTENCE_MULTI_VOICE = join(STARRAIL_DATA, 'ExcelOutput', 'TalkSentenceMultiVoice.json')
 
 const voiceMap = {} as Record<string, Voice>
 
@@ -41,15 +41,16 @@ for (const wav of wavs) {
 console.log(Object.keys(voiceMap).length, 'wavs found')
 
 const talkSentenceConfig = await readJSON<TalkSentenceConfig>(TALK_SENTENCE_CONFIG)
+const talkSentenceMultiVoiceConfig = await readJSON<TalkSentenceMultiVoiceConfig>(TALK_SENTENCE_MULTI_VOICE)
 
-const voiceHash = Object.fromEntries(Object.values(talkSentenceConfig).map(({ VoiceID, TextmapTalkSentenceName: { Hash: TextmapTalkSentenceNameHash }, TalkSentenceText: { Hash: TalkSentenceTexthash } }) => {
-  if (VoiceID) {
-    return [VoiceID, {
+const voiceHash = Object.fromEntries(Object.values(talkSentenceConfig).flatMap(({ VoiceID, TalkSentenceID, TextmapTalkSentenceName: { Hash: TextmapTalkSentenceNameHash }, TalkSentenceText: { Hash: TalkSentenceTexthash } }) =>
+  [VoiceID, ...talkSentenceMultiVoiceConfig[TalkSentenceID]?.VoiceIDList || []]
+    .filter(voice => voice !== undefined)
+    .map(voice => [voice, {
       TextmapTalkSentenceNameHash,
       TalkSentenceTexthash
-    }]
-  }
-}).filter(Boolean) as [number, { TextmapTalkSentenceNameHash: number, TalkSentenceTexthash: number }][])
+    }])
+) as [number, { TextmapTalkSentenceNameHash: number, TalkSentenceTexthash: number }][])
 
 
 const voiceConfig = await readJSON<VoiceConfig>(VOICE_CONFIG)
@@ -119,6 +120,7 @@ type Voice = {
 type VoiceConfig = {
   [key: string]: {
     VoiceID: number
+    IsPlayerInvolved?: boolean
     VoicePath: string
     VoiceType?: string
   }
@@ -134,5 +136,12 @@ type TalkSentenceConfig = {
     TalkSentenceText: {
       Hash: number
     }
+  }
+}
+
+type TalkSentenceMultiVoiceConfig = {
+  [key: string]: {
+    TalkSentenceID: number
+    VoiceIDList: number[]
   }
 }
