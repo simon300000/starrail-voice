@@ -18,6 +18,7 @@ const STARRAIL_DATA = join(import.meta.dirname, 'StarRailData')
 const VOICE_CONFIG = join(STARRAIL_DATA, 'ExcelOutput', 'VoiceConfig.json')
 const TALK_SENTENCE_CONFIG = join(STARRAIL_DATA, 'ExcelOutput', 'TalkSentenceConfig.json')
 const TALK_SENTENCE_MULTI_VOICE = join(STARRAIL_DATA, 'ExcelOutput', 'TalkSentenceMultiVoice.json')
+const VOICE_ATLAS = join(STARRAIL_DATA, 'ExcelOutput', 'VoiceAtlas.json')
 
 const voiceMap = {} as Record<string, Voice>
 
@@ -43,7 +44,7 @@ console.log(Object.keys(voiceMap).length, 'wavs found')
 const talkSentenceConfig = await readJSON<TalkSentenceConfig>(TALK_SENTENCE_CONFIG)
 const talkSentenceMultiVoiceConfig = await readJSON<TalkSentenceMultiVoiceConfig>(TALK_SENTENCE_MULTI_VOICE)
 
-const voiceHash = Object.fromEntries(Object.values(talkSentenceConfig).flatMap(({ VoiceID, TalkSentenceID, TextmapTalkSentenceName: { Hash: TextmapTalkSentenceNameHash }, TalkSentenceText: { Hash: TalkSentenceTexthash } }) =>
+const voiceTalkConfigHash = Object.fromEntries(Object.values(talkSentenceConfig).flatMap(({ VoiceID, TalkSentenceID, TextmapTalkSentenceName: { Hash: TextmapTalkSentenceNameHash }, TalkSentenceText: { Hash: TalkSentenceTexthash } }) =>
   [VoiceID, ...talkSentenceMultiVoiceConfig[TalkSentenceID]?.VoiceIDList || []]
     .filter(voice => voice !== undefined)
     .map(voice => [voice, {
@@ -52,6 +53,15 @@ const voiceHash = Object.fromEntries(Object.values(talkSentenceConfig).flatMap((
     }])
 ) as [number, { TextmapTalkSentenceNameHash: number, TalkSentenceTexthash: number }][])
 
+
+const voiceAtlas = await readJSON<VoiceAtlas>(VOICE_ATLAS)
+const atlasList = Object.values(voiceAtlas).flatMap(characterAtlas => Object.values(characterAtlas))
+
+const voiceAtlasHash = Object.fromEntries(atlasList.map(atlas => {
+  if ('AudioID' in atlas) {
+    return [atlas.AudioID, { textHash: atlas.Voice_M.Hash }]
+  }
+}).filter(Boolean) as [number, { textHash: number }][])
 
 const voiceConfig = await readJSON<VoiceConfig>(VOICE_CONFIG)
 const textMap = await readTextMap(STARRAIL_DATA, TEXT_MAP_MAP)
@@ -67,10 +77,14 @@ for (const { VoiceID, VoicePath, VoiceType } of Object.values(voiceConfig)) {
       voice.voiceType = VoiceType || ''
       voice.voiceID = VoiceID.toString()
       voice.language = language
-      const config = voiceHash[VoiceID]
+      const config = voiceTalkConfigHash[VoiceID]
       if (config) {
         voice.transcription = textMap[language][config.TalkSentenceTexthash] || ''
         voice.speaker = textMap['English'][config.TextmapTalkSentenceNameHash] || ''
+      }
+      const atlas = voiceAtlasHash[VoiceID]
+      if (atlas) {
+        voice.transcription = textMap[language][atlas.textHash] || ''
       }
     }
   }
@@ -143,5 +157,30 @@ type TalkSentenceMultiVoiceConfig = {
   [key: string]: {
     TalkSentenceID: number
     VoiceIDList: number[]
+  }
+}
+
+type Atlas = {
+  AvatarID: number
+  VoiceID: number
+  VoiceTitle: {
+    Hash: number
+  }
+  Voice_M: {
+    Hash: number
+  }
+  Voice_F: {
+    Hash: number
+  }
+  IsBattleVoice: boolean
+  UnlockDesc: {
+    Hash: number
+  }
+  SortID: number
+} & ({ AudioID: number, AudioEvent: '' } | { AudioEvent: string })
+
+type VoiceAtlas = {
+  [key: string]: {
+    [key: string]: Atlas
   }
 }
