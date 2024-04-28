@@ -67,24 +67,27 @@ const voiceConfig = await readJSON<VoiceConfig>(VOICE_CONFIG)
 const textMap = await readTextMap(STARRAIL_DATA, TEXT_MAP_MAP)
 
 for (const { VoiceID, VoicePath, VoiceType } of Object.values(voiceConfig)) {
+  const suffixes = ['', '_m', '_f']
   for (const language of LANGUAGES) {
-    const wem = `${language}/voice/${VoicePath}.wem`
-    const hash = encodeFNV64(wem)
-    const wav = `${hash}.wav`
-    const voice = voiceMap[wav]
-    if (voice) {
-      voice.inGameFilename = wem
-      voice.voiceType = VoiceType || ''
-      voice.voiceID = VoiceID.toString()
-      voice.language = language
-      const config = voiceTalkConfigHash[VoiceID]
-      if (config) {
-        voice.transcription = textMap[language][config.TalkSentenceTexthash] || ''
-        voice.speaker = textMap['English'][config.TextmapTalkSentenceNameHash] || ''
-      }
-      const atlas = voiceAtlasHash[VoiceID]
-      if (atlas) {
-        voice.transcription = textMap[language][atlas.textHash] || ''
+    for (const suffix of suffixes) {
+      const wem = `${language}/voice/${VoicePath}${suffix}.wem`
+      const hash = encodeFNV64(wem)
+      const wav = `${hash}.wav`
+      const voice = voiceMap[wav]
+      if (voice) {
+        voice.inGameFilename = wem
+        voice.voiceType = VoiceType || ''
+        voice.voiceID = VoiceID.toString()
+        voice.language = language
+        const config = voiceTalkConfigHash[VoiceID]
+        if (config) {
+          voice.transcription = textMap[language][config.TalkSentenceTexthash] || ''
+          voice.speaker = textMap['English'][config.TextmapTalkSentenceNameHash] || ''
+        }
+        const atlas = voiceAtlasHash[VoiceID]
+        if (atlas) {
+          voice.transcription = textMap[language][atlas.textHash] || ''
+        }
       }
     }
   }
