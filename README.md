@@ -7,13 +7,13 @@ Hugging Face 🤗  [StarRail-Voice](https://huggingface.co/datasets/simon3000/st
 <!-- STATS -->
 Last update at `2024-04-28`
 
-`153612` wavs
+`149303` wavs
 
-`35368` without speaker
+`31059` without speaker
 
-`29380` without transcription
+`25071` without transcription
 
-`28114` without inGameFilename
+`23805` without inGameFilename
 <!-- STATS_END -->
 
 ## Dataset Details

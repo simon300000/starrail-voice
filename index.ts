@@ -12,7 +12,6 @@ const WAV_PATH_PASS1 = join(RESULT, 'wav-pass1')
 const WEM_PATH_PASS1 = join(RESULT, 'wem-pass1')
 
 const BNK_PATH_PASS2 = join(RESULT, 'wem-bnk-pass2')
-const WEM_PATH_PASS2 = join(RESULT, 'wem-pass2')
 const WAV_PATH_PASS2 = join(RESULT, 'wav-pass2')
 
 await checkResultFolder(RESULT)
@@ -30,7 +29,7 @@ await createFolders(bnks.map(bnk => bnk.replace(WEM_PATH_PASS1, BNK_PATH_PASS2))
 await Promise.all(bnks.map(bnk => rename(bnk, bnk.replace(WEM_PATH_PASS1, BNK_PATH_PASS2))))
 
 console.log('Unpacking BNK Pass 2...')
-await unpackBNKs(BNK_PATH_PASS2, WEM_PATH_PASS2, WAV_PATH_PASS2)
+await unpackBNKs(BNK_PATH_PASS2, WAV_PATH_PASS2)
 
 console.log('Renaming pass2 wavs...')
 
