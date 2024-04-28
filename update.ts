@@ -13,6 +13,8 @@ const TEXT_MAP_MAP = {
 const LANGUAGES = Object.keys(TEXT_MAP_MAP) as Array<keyof typeof TEXT_MAP_MAP>
 
 const RESULT_PATH = join(import.meta.dirname, 'result')
+const RESULT_PASS1 = join(RESULT_PATH, 'wav-pass1')
+const RESULT_PASS2 = join(RESULT_PATH, 'wav-pass2')
 const STARRAIL_DATA = join(import.meta.dirname, 'StarRailData')
 
 const VOICE_CONFIG = join(STARRAIL_DATA, 'ExcelOutput', 'VoiceConfig.json')
@@ -22,12 +24,21 @@ const VOICE_ATLAS = join(STARRAIL_DATA, 'ExcelOutput', 'VoiceAtlas.json')
 
 const voiceMap = {} as Record<string, Voice>
 
-const wavs = await findWAV(RESULT_PATH)
+const wavs1 = await findWAV(RESULT_PASS1)
+const wavs2 = await findWAV(RESULT_PASS2)
 
-for (const wav of wavs) {
+for (const wav of [...wavs1, ...wavs2]) {
   const language = LANGUAGES.find(l => wav.includes(l.toLowerCase())) || ''
   const base = basename(wav)
   const name = language ? `${language.toLowerCase()}/${base}` : base
+  if (voiceMap[name]) {
+    if (wav.includes('pass2')) {
+      continue
+    } else {
+      console.log('Duplicate', name, wav, voiceMap[name].filename)
+    }
+  }
+
   voiceMap[name] = {
     filename: wav,
     inGameFilename: '',
