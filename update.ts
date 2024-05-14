@@ -22,6 +22,8 @@ const TALK_SENTENCE_CONFIG = join(STARRAIL_DATA, 'ExcelOutput', 'TalkSentenceCon
 const TALK_SENTENCE_MULTI_VOICE = join(STARRAIL_DATA, 'ExcelOutput', 'TalkSentenceMultiVoice.json')
 const VOICE_ATLAS = join(STARRAIL_DATA, 'ExcelOutput', 'VoiceAtlas.json')
 
+const AMBIENT_NO_TRANSCRIPTION = [0, 1, 2, 3].map(i => `vo_ambient_w${i}`)
+
 const voiceMap = {} as Record<string, Voice>
 
 const wavs1 = await findWAV(RESULT_PASS1)
@@ -92,7 +94,9 @@ for (const { VoiceID, VoicePath, VoiceType } of Object.values(voiceConfig)) {
         voice.language = language
         const config = voiceTalkConfigHash[VoiceID]
         if (config) {
-          voice.transcription = textMap[language][config.TalkSentenceTexthash] || ''
+          if (!AMBIENT_NO_TRANSCRIPTION.some(ambient => VoicePath.startsWith(ambient))) {
+            voice.transcription = textMap[language][config.TalkSentenceTexthash] || ''
+          }
           voice.speaker = textMap['English'][config.TextmapTalkSentenceNameHash] || ''
         }
         const atlas = voiceAtlasHash[VoiceID]
