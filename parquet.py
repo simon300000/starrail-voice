@@ -6,6 +6,8 @@ audioFolderDir = 'result/'
 
 api = HfApi()
 
+print('Uploading README.md')
+
 api.upload_file(
     path_or_fileobj=audioFolderDir + "README.md",
     path_in_repo="README.md",
