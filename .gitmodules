@@ -3,4 +3,4 @@
 	url = https://github.com/simon300000/hoyo-voice-extractor.git
 [submodule "StarRailData"]
 	path = StarRailData
-	url = https://github.com/Dimbreath/StarRailData.git
+	url = https://gitlab.com/Dimbreath/turnbasedgamedata.git 
