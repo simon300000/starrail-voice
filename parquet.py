@@ -15,6 +15,15 @@ api.upload_file(
     repo_type="dataset"
 )
 
+print('Uploading result.json')
+
+api.upload_file(
+    path_or_fileobj='result.json',
+    path_in_repo='result.json',
+    repo_id='simon3000/starrail-voice',
+    repo_type='dataset'
+)
+
 print('Loading metadata.jsonl')
 
 with open(audioFolderDir+ 'metadata.jsonl', 'r', encoding='utf-8') as json_file:

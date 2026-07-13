@@ -1,47 +1,12 @@
-import { join, sep, dirname } from 'path'
-import { rename, mkdir, rm, rmdir } from 'fs/promises'
+import { join } from 'path'
 
-import { checkResultFolder, unpackPCKs, findFiles, findWAV, createFolders, unpackBNKs } from './hoyo-voice-extractor/index.js'
+import { checkResultFolder, unpackPCKs } from './hoyo-voice-extractor/index.js'
 
-const PCK_SOURCE = join(import.meta.dirname, 'AudioPackage')
-const RESULT = join(import.meta.dirname, 'result')
+const PCK_SOURCE = process.env.VOICE_SOURCE_PATH || join(import.meta.dirname, 'AudioPackage')
+const RESULT = process.env.VOICE_RESULT_PATH || join(import.meta.dirname, 'result')
 const WEM_PATH = join(RESULT, 'wem')
 const WAV_PATH = join(RESULT, 'wav')
 
-const WAV_PATH_PASS1 = join(RESULT, 'wav-pass1')
-const WEM_PATH_PASS1 = join(RESULT, 'wem-pass1')
-
-const BNK_PATH_PASS2 = join(RESULT, 'wem-bnk-pass2')
-const WAV_PATH_PASS2 = join(RESULT, 'wav-pass2')
-
 await checkResultFolder(RESULT)
 
-console.log('Unpacking PCK Pass 1...')
 await unpackPCKs(PCK_SOURCE, WEM_PATH, WAV_PATH)
-
-console.log('Moving bnk files...')
-await rename(WEM_PATH, WEM_PATH_PASS1)
-await rename(WAV_PATH, WAV_PATH_PASS1)
-await mkdir(BNK_PATH_PASS2, { recursive: true })
-
-const bnks = await findFiles(WEM_PATH_PASS1, '.bnk')
-await createFolders(bnks.map(bnk => bnk.replace(WEM_PATH_PASS1, BNK_PATH_PASS2)))
-await Promise.all(bnks.map(bnk => rename(bnk, bnk.replace(WEM_PATH_PASS1, BNK_PATH_PASS2))))
-
-console.log('Unpacking BNK Pass 2...')
-await unpackBNKs(BNK_PATH_PASS2, WAV_PATH_PASS2)
-
-console.log('Renaming pass2 wavs...')
-
-const pass2Wavs = await findWAV(WAV_PATH_PASS2)
-const bnkFolders = new Set<string>()
-const dotBNK = `.bnk${sep}`
-await Promise.all(pass2Wavs.map(async wav => {
-  if (wav.includes(dotBNK)) {
-    const newName = wav.replace(dotBNK, '')
-    await rename(wav, newName)
-    bnkFolders.add(dirname(wav))
-  }
-}))
-
-await Promise.all([...bnkFolders].map(bnk => rmdir(bnk, {})))
