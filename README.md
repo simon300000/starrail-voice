@@ -9,7 +9,7 @@ Last update at `2026-07-13`, game version `4.3.0`
 
 `98406` wavs
 
-`15340` without speaker (16%)
+`14306` without speaker (15%)
 
 `14574` without transcription (15%)
 

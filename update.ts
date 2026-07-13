@@ -68,6 +68,7 @@ for (const wav of wavs) {
     language,
     transcription: '',
     speaker: '',
+    speakerSource: '',
     voiceType: '',
     voiceID: ''
   }
@@ -138,6 +139,19 @@ for (const { TalkSentenceName, IconPath } of performanceSkipCharacters) {
   }
 }
 
+// TarotBook VoicePaths use the generic `player` tag, while AvatarConfig uses
+// gendered tags such as `playerboy` and `playergirl`. All official player
+// avatars resolve to the same display name (`{NICKNAME}`), so add the generic
+// alias only when that official name is unique.
+const playerSpeakers = new Set(Object.values(avatarConfig).flatMap(({ AvatarID, AvatarVOTag }) =>
+  AvatarVOTag && /^player(?:boy|girl)/i.test(AvatarVOTag) && avatarNames[AvatarID]
+    ? [avatarNames[AvatarID]]
+    : []
+))
+if (playerSpeakers.size === 1) {
+  addSpeakerAlias('player', [...playerSpeakers][0])
+}
+
 function resolveSpeakerFromPath(voicePath: string): string {
   const segments = voicePath.toLowerCase().split('_')
   const speakers = new Set(segments.flatMap(segment => {
@@ -151,6 +165,30 @@ function resolveSpeakerFromPath(voicePath: string): string {
     return [...speakers][0]
   }
   return ''
+}
+
+function resolveSideSpeakerFromPath(voicePath: string): string {
+  const segments = voicePath.split('_')
+  if (!/^side/i.test(segments[0] || '')) return ''
+
+  // Side VoicePaths use a positional schema:
+  //   side-family_mission_speaker_sequence[_state]
+  // The third segment is the speaker even when the path has no numeric sequence
+  // (for example, side1_tp_serval_song) or has an extra state segment (for
+  // example, side4_wsw_chimera_jiaoruo_001).
+  const speakerAlias = segments[2]
+  if (!speakerAlias) return ''
+
+  const officialSpeakers = speakersByPathAlias.get(speakerAlias.toLowerCase())
+  if (officialSpeakers?.size === 1) {
+    return [...officialSpeakers][0]
+  }
+
+  // Internal NPC tags such as guyun, jianshi, and minerJ have no official
+  // AvatarVOTag mapping. Their structural position is still unambiguous, so
+  // preserve the original tag instead of attributing the line to another
+  // recognizable character elsewhere in the path.
+  return speakerAlias
 }
 
 // --- Build VoiceID -> text/speaker (resolve ambiguity by TEXT comparison) ---
@@ -527,6 +565,7 @@ for (const { VoiceID, VoicePath, VoiceType } of Object.values(voiceConfig)) {
           }
           if (config.speaker) {
             voice.speaker = config.speaker
+            voice.speakerSource = 'path1-talk-sentence'
           }
         }
         // VoiceAtlas AudioID lookup (AudioID == VoiceID from VoiceConfig)
@@ -537,6 +576,7 @@ for (const { VoiceID, VoicePath, VoiceType } of Object.values(voiceConfig)) {
           }
           if (!voice.speaker) {
             voice.speaker = atlas.speaker
+            if (atlas.speaker) voice.speakerSource = 'path2-voice-atlas-audio-id'
           }
         }
       }
@@ -563,13 +603,19 @@ for (const key of Object.keys(voiceMap)) {
       const config = voiceTextByID.get(altVoiceID)
       if (config) {
         if (config.transcription) voice.transcription = config.transcription
-        if (config.speaker) voice.speaker = config.speaker
+        if (config.speaker) {
+          voice.speaker = config.speaker
+          voice.speakerSource = 'path1-talk-sentence'
+        }
       }
 
       const atlas = voiceAtlasByAudioID.get(altVoiceID)
       if (atlas) {
         if (!voice.transcription) voice.transcription = resolveTextHash(atlas.textHash, voice.language)
-        if (!voice.speaker) voice.speaker = atlas.speaker
+        if (!voice.speaker) {
+          voice.speaker = atlas.speaker
+          if (atlas.speaker) voice.speakerSource = 'path2-voice-atlas-audio-id'
+        }
       }
     }
   }
@@ -595,55 +641,97 @@ for (const key of Object.keys(voiceMap)) {
   }
   if (!voice.speaker && speakers.size === 1) {
     voice.speaker = [...speakers][0]
+    voice.speakerSource = 'path3-voice-atlas-event-bnk'
   }
 }
 
-// --- Fourth pass: exact official speaker aliases in VoicePath ---
+// --- Fourth pass: structural Side speaker or exact official VoicePath alias ---
+let path4SpeakerCount = 0
+
 for (const voice of Object.values(voiceMap)) {
   if (voice.speaker) continue
   if (!voice.inGameFilename) continue
   const match = voice.inGameFilename.match(/\/voice\/(.+)\.wem$/)
   if (match) {
     const voicePath = match[1].replace(/(_m|_f)$/, '')
-    const speaker = resolveSpeakerFromPath(voicePath)
+    // `vo_syss` is a TarotBook path: its first character tag is the book/page
+    // subject, not the speaker. It must be resolved from its final role tag in
+    // path 5 and must never fall through this whole-path uniqueness heuristic.
+    if (voicePath.toLowerCase().startsWith('vo_syss_')) continue
+    const speaker = /^side/i.test(voicePath)
+      ? resolveSideSpeakerFromPath(voicePath)
+      : resolveSpeakerFromPath(voicePath)
     if (speaker) {
       voice.speaker = speaker
+      voice.speakerSource = 'path4-unique-official-alias'
+      path4SpeakerCount++
     }
   }
 }
 
-// --- Fifth pass: positional speaker tag for two-character path names ---
-// Story/system lines embed a scene-owner tag and the speaker tag; a two-tag
-// path needs to pick the right one. The position differs by naming family,
-// verified against independent official speaker labels:
-//   • `vo_syss_<speaker>_<chapter>_<scene>_<listener>_<n>` — the speaker is the
-//     FIRST tag (1262/1262 correct on single-listener lines with a known label).
-//   • every other family, e.g. `side2_yunli_argenti_<n>` — the speaker is the
-//     LAST tag before the number (28/28 correct; FIRST tag 0/28).
-// resolveSpeakerFromPath (4th pass) refuses these because >1 avatar tag appears,
-// so it only handles single-tag paths. Fire only on ≥2 distinct avatar tags and
-// only when the chosen tag maps to exactly one official speaker.
+// --- Fifth pass: positional speaker tag ---
+//   • `vo_syss`: this is a TarotBook path. Resolve ONLY the final role tag,
+//     because the first character tag is the book/page subject. This also maps
+//     the generic `player` role to the official `{NICKNAME}` display name.
+//   • every other family, e.g. `side2_yunli_argenti_<n>`: select the LAST tag.
+//     This direction agrees with every independently labeled current candidate.
+// For non-TarotBook paths, fire only on at least two distinct official tags.
+let path5SpeakerCount = 0
 for (const voice of Object.values(voiceMap)) {
-  if (voice.speaker) continue
   if (!voice.inGameFilename) continue
   const match = voice.inGameFilename.match(/\/voice\/(.+)\.wem$/)
   if (!match) continue
   const path = match[1].replace(/(_m|_f)$/, '')
   const stem = path.replace(/_\d+$/, '')
+  const lowerStem = stem.toLowerCase()
 
-  const tagSpeakers = stem.toLowerCase().split('_').flatMap(segment => {
+  const tagSpeakers = lowerStem.split('_').flatMap(segment => {
     const aliases = speakersByPathAlias.get(segment)
     return aliases?.size === 1 ? [[segment, [...aliases][0]] as const] : []
   })
-  if (tagSpeakers.length < 2) continue // single-tag handled by 4th pass
+  const isSystemStory = lowerStem.startsWith('vo_syss_')
+  let chosen: readonly [string, string] | undefined
+  if (isSystemStory) {
+    const finalAlias = lowerStem.split('_').at(-1) || ''
+    const finalSpeakers = speakersByPathAlias.get(finalAlias)
+    if (finalSpeakers?.size === 1) {
+      chosen = [finalAlias, [...finalSpeakers][0]] as const
+    }
+  } else {
+    const distinct = new Set(tagSpeakers.map(([, speaker]) => speaker))
+    if (tagSpeakers.length >= 2 && distinct.size >= 2) {
+      chosen = tagSpeakers[tagSpeakers.length - 1]
+    }
+  }
+  if (!chosen || voice.speaker) continue
 
-  const distinct = new Set(tagSpeakers.map(([, speaker]) => speaker))
-  if (distinct.size < 2) continue // same speaker repeated — nothing to disambiguate
-
-  // vo_syss puts the speaker first; all other families put it last.
-  const chosen = stem.startsWith('vo_syss_') ? tagSpeakers[0] : tagSpeakers[tagSpeakers.length - 1]
   voice.speaker = chosen[1]
+  voice.speakerSource = 'path5-positional-final-alias'
+  path5SpeakerCount++
 }
+
+// Normalize the player placeholder into a stable gendered dataset label. Some
+// legacy/BNK rows have no `_m`/`_f` inGameFilename; keep those as `player`
+// rather than retaining the unresolved `{NICKNAME}` placeholder.
+let playerMaleCount = 0
+let playerFemaleCount = 0
+let playerUngenderedCount = 0
+for (const voice of Object.values(voiceMap)) {
+  if (voice.speaker !== '{NICKNAME}') continue
+  if (/_m\.wem$/i.test(voice.inGameFilename)) {
+    voice.speaker = 'player_m'
+    playerMaleCount++
+  } else if (/_f\.wem$/i.test(voice.inGameFilename)) {
+    voice.speaker = 'player_f'
+    playerFemaleCount++
+  } else {
+    voice.speaker = 'player'
+    playerUngenderedCount++
+  }
+}
+
+console.log(`Player speaker labels: player_m=${playerMaleCount}, player_f=${playerFemaleCount}, player=${playerUngenderedCount}`)
+console.log(`Speaker path fallback assignments: path 4=${path4SpeakerCount}, path 5=${path5SpeakerCount}`)
 
 // --- Output ---
 await writeFile(join(import.meta.dirname, 'result.json'), JSON.stringify(voiceMap))
@@ -690,9 +778,17 @@ type Voice = {
   language: typeof LANGUAGES[number] | ''
   transcription: string
   speaker: string
+  speakerSource: SpeakerSource | ''
   voiceType: string
   voiceID: string
 }
+
+type SpeakerSource =
+  | 'path1-talk-sentence'
+  | 'path2-voice-atlas-audio-id'
+  | 'path3-voice-atlas-event-bnk'
+  | 'path4-unique-official-alias'
+  | 'path5-positional-final-alias'
 
 type VoiceConfigEntry = {
   VoiceID: number
