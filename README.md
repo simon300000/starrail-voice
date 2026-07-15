@@ -5,7 +5,7 @@ StarRail Voice is a dataset of voice lines from the popular game [Honkai: Star R
 Hugging Face 🤗  [StarRail-Voice](https://huggingface.co/datasets/simon3000/starrail-voice)
 
 <!-- STATS -->
-Last update at `2026-07-13`, game version `4.3.0`
+Last update at `2026-07-15`, game version `4.3.0`
 
 `98406` wavs
 
@@ -57,7 +57,3 @@ Speaker names can be partially inferred from the ingame filenames.
 ## Licensing Information
 
 Copyright © COGNOSPHERE. All Rights Reserved.
-
-## More Information
-
-I can upload wav files on demand.
