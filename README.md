@@ -48,6 +48,10 @@ The dataset contains official annotations from the game, including language, spe
 
 Annotations are incomplete. Some voice lines are missing speaker names and transcriptions.
 
+Annotations are not guaranteed to be completely accurate.
+
+Speakers and transcriptions may contain markups and placeholders, for example: `Hey, here you are, {NICKNAME}! Did you hear that? These two masters just called me a swordplay genius.`
+
 ### Recommendations
 
 Users should be made aware of the risks, biases and limitations of the dataset.
