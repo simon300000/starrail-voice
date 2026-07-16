@@ -129,3 +129,5 @@ dist
 .pnp.*
 /__pycache__
 result.json
+result/README.md
+result/metadata.jsonl

@@ -5,3 +5,6 @@
 	path = StarRailData
 	url = https://gitlab.com/Dimbreath/turnbasedgamedata.git
     shallow = true 
+[submodule "HoyoDown"]
+	path = HoyoDown
+	url = https://github.com/simon300000/HoyoDown.git

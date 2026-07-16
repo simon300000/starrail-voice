@@ -1,8 +1,10 @@
 {
   "scripts": {
-    "build": "npm run build:extractor-tools && npx tsc -b hoyo-voice-extractor/tsconfig.json tsconfig.json",
+    "build": "npm run build:hoyodown && npm run build:extractor-tools && npx tsc -b hoyo-voice-extractor/tsconfig.json tsconfig.json",
+    "build:hoyodown": "node scripts/build-hoyodown.mjs",
     "build:extractor-tools": "node scripts/build-extractor-tools.mjs",
     "watch": "npx tsc -b -w hoyo-voice-extractor/tsconfig.json tsconfig.json",
+    "download": "node download.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "type": "module",
