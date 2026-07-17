@@ -536,11 +536,11 @@ try {
 
 // --- Main matching loop ---
 // Build alternative FNV hash index (bare VoicePath, without language/voice prefix)
-const altHashToVoiceID = new Map<string, number>()
+const altHashToVoice = new Map<string, { voiceID: number, inGameFilename: string }>()
 for (const { VoiceID, VoicePath } of Object.values(voiceConfig)) {
   for (const suffix of ['', '_m', '_f']) {
     const altPath = `${VoicePath}${suffix}.wem`
-    altHashToVoiceID.set(encodeFNV64(altPath), VoiceID)
+    altHashToVoice.set(encodeFNV64(altPath), { voiceID: VoiceID, inGameFilename: altPath })
   }
 }
 
@@ -591,11 +591,12 @@ for (const key of Object.keys(voiceMap)) {
 
   const baseWav = basename(voice.filename)
   const hash = baseWav.replace('.wav', '')
-  const altVoiceID = altHashToVoiceID.get(hash)
-  if (altVoiceID) {
+  const altVoice = altHashToVoice.get(hash)
+  if (altVoice) {
+    const { voiceID: altVoiceID, inGameFilename } = altVoice
     const vcEntry = (voiceConfig as VoiceConfigEntry[]).find(v => v.VoiceID === altVoiceID)
     if (vcEntry) {
-      voice.inGameFilename = `(alt:${vcEntry.VoicePath}.wem)`
+      voice.inGameFilename = inGameFilename
       voice.voiceType = vcEntry.VoiceType || ''
       voice.voiceID = String(vcEntry.VoiceID)
       voice.language = voice.language || 'Chinese(PRC)'
