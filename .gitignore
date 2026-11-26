@@ -131,3 +131,6 @@ dist
 result.json
 result/README.md
 result/metadata.jsonl
+result/speaker-archives/
+/.scratch
+/docs/
