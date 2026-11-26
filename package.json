@@ -5,6 +5,7 @@
     "build:extractor-tools": "node scripts/build-extractor-tools.mjs",
     "watch": "npx tsc -b -w hoyo-voice-extractor/tsconfig.json tsconfig.json",
     "download": "node download.js",
+    "update": "node update.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "type": "module",

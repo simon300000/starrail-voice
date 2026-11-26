@@ -15,13 +15,13 @@ const TEXT_MAP_MAP = {
 const LANGUAGES = Object.keys(TEXT_MAP_MAP) as Array<keyof typeof TEXT_MAP_MAP>
 
 const RESULT_PATH = process.env.VOICE_RESULT_PATH || join(import.meta.dirname, 'result')
-const WAV_PATH = join(RESULT_PATH, 'wav')
-const STARRAIL_DATA = join(import.meta.dirname, 'StarRailData')
+const WAV_PATH = process.env.VOICE_WAV_PATH || join(RESULT_PATH, 'wav')
+const STARRAIL_DATA = process.env.VOICE_DATA_PATH || join(import.meta.dirname, 'StarRailData')
 const execFileAsync = promisify(execFile)
 
 const gameVersion = await (async () => {
   try {
-    const { stdout } = await execFileAsync('git', ['-C', STARRAIL_DATA, 'log', '-1', '--format=%s'])
+    const { stdout } = await execFileAsync('git', ['-c', `safe.directory=${STARRAIL_DATA.replace(/\\/g, '/')}`, '-C', STARRAIL_DATA, 'log', '-1', '--format=%s'])
     return stdout.match(/(?:Win|REL)(\d+\.\d+\.\d+)/)?.[1] || ''
   } catch {
     return ''
@@ -46,7 +46,9 @@ const FATE_BROADCAST = join(STARRAIL_DATA, 'ExcelOutput', 'FateBroadcast.json')
 const voiceMap = {} as Record<string, Voice>
 let duplicateCount = 0
 
-const wavs = await findWAV(WAV_PATH)
+const wavs = (await findWAV(WAV_PATH)).sort((left, right) =>
+  basename(left).localeCompare(basename(right)) || left.localeCompare(right)
+)
 
 for (const wav of wavs) {
   const lowerWav = wav.toLowerCase()
@@ -312,7 +314,7 @@ try {
   // Build BNK index: bank ID -> Wwise source IDs. DIDX lists embedded media;
   // HIRC type 2 (CAkSound) carries the source ID for streamed/external media,
   // which is how the VoBanks WAV filenames are produced.
-  const wemDir = join(RESULT_PATH, 'wem')
+  const wemDir = process.env.VOICE_WEM_PATH || join(RESULT_PATH, 'wem')
   const bankToSources = new Map<number, Set<number>>()
 
   const walkDir = async (dir: string): Promise<string[]> => {
@@ -735,7 +737,7 @@ console.log(`Player speaker labels: player_m=${playerMaleCount}, player_f=${play
 console.log(`Speaker path fallback assignments: path 4=${path4SpeakerCount}, path 5=${path5SpeakerCount}`)
 
 // --- Output ---
-await writeFile(join(import.meta.dirname, 'result.json'), JSON.stringify(voiceMap))
+await writeFile(join(process.env.VOICE_RESULT_PATH ? RESULT_PATH : import.meta.dirname, 'result.json'), JSON.stringify(voiceMap))
 
 const metadata = Object.values(voiceMap)
   .map(({ filename, inGameFilename, transcription, language, speaker, voiceType }) => {
@@ -751,10 +753,14 @@ const metadata = Object.values(voiceMap)
   .join('\n')
 
 await writeFile(join(RESULT_PATH, 'metadata.jsonl'), metadata)
-await updateStats(voiceMap, 'README.md')
+const statsReadme = process.env.VOICE_RESULT_PATH ? join(RESULT_PATH, 'README.md') : 'README.md'
+if (process.env.VOICE_RESULT_PATH) {
+  await writeFile(statsReadme, await readFile(join(import.meta.dirname, 'README.md'), 'utf-8'))
+}
+await updateStats(voiceMap, statsReadme)
 if (gameVersion) {
-  const readme = await readFile('README.md', 'utf-8')
-  await writeFile('README.md', readme.replace(/Last update at `([^`]+)`(?:, game version `[^`]+`)?/, `Last update at \`$1\`, game version \`${gameVersion}\``))
+  const readme = await readFile(statsReadme, 'utf-8')
+  await writeFile(statsReadme, readme.replace(/Last update at `([^`]+)`(?:, game version `[^`]+`)?/, `Last update at \`$1\`, game version \`${gameVersion}\``))
 }
 
 const huggingfaceMetadata = `---
@@ -770,7 +776,7 @@ language:
 pretty_name: StarRail Voice
 ---`
 
-await copyReadme('README.md', join(RESULT_PATH, 'README.md'), huggingfaceMetadata)
+await copyReadme(statsReadme, join(RESULT_PATH, 'README.md'), huggingfaceMetadata)
 
 // --- Types ---
 type Voice = {
