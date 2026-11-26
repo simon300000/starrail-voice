@@ -6,16 +6,18 @@ Hugging Face 🤗  [StarRail-Voice](https://huggingface.co/datasets/simon3000/st
 
 ModelScope [StarRail-Voice](https://modelscope.cn/datasets/simono/starrail-voice)
 
+Per-speaker downloads are grouped by language and ZIP size. Browse every archive in the [ZIP index](https://huggingface.co/datasets/simon3000/starrail-voice/blob/main/speaker-archives/README.md).
+
 <!-- STATS -->
-Last update at `2026-07-16`, game version `4.4.0`
+Last update at `2026-10-07`, game version `4.6.0`
 
-`403437` wavs
+`434280` wavs
 
-`60164` without speaker (15%)
+`64010` without speaker (15%)
 
-`61375` without transcription (15%)
+`64982` without transcription (15%)
 
-`57869` without inGameFilename (14%)
+`60160` without inGameFilename (14%)
 <!-- STATS_END -->
 
 ## Dataset Details
